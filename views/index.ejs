@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Location Tracker</title>
+
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-search/4.0.0/leaflet-search.min.css" 
+          integrity="sha512-+o26nsM883F01UlBWY09KgjDn7o1rgGFi1a+lX1zI7m0I2iIh4rckpQSKVnukvn8DKsb0A9hZHoUY7lBkvLdfA==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="/css1/style.css"> 
+</head>
+
+<body>
+    <h1>Live Location Tracker</h1>
+    <div id="map" style="height: 400px;"></div>
+
+    <!-- Leaflet and Socket.io -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" 
+            integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" 
+            crossorigin="anonymous"></script>
+    
+    <!-- Leaflet Search Plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-search/4.0.0/leaflet-search.min.js" 
+            integrity="sha512-nvy2tht2GE/ReEeu0Zu7/Y1IgKTTrX1r1MaROtD1HDol5WUvw7Ih29qA6JCNCgYURzPcBqaSv12ZnNS68Eaq6Q==" 
+            crossorigin="anonymous"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        const socket = io();
+        console.log('Socket connected');
+
+        // Initialize Map
+        const map = L.map('map').setView([0, 0], 10); // Default: India
+
+        // Add Tile Layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marker
+        let marker = L.marker([20.5937, 78.9629]).addTo(map);
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    
+                    // Update Marker Position
+                    marker.setLatLng([latitude, longitude]);
+                    map.setView([latitude, longitude], 15);
+
+                    // Emit Location to Server
+                    socket.emit('send-location', { latitude, longitude });
+                },
+                (error) => {
+                    console.log('Error occurred:', error.message);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        } else {
+            console.log('Geolocation is not supported by this browser.');
+        }
+        socket.on('receive-location',(data)=>{
+            const {id,latitude,longitude}=data;
+            map.setView([latitude,longitude],16)
+        })
+    </script>
+
+</body>
+</html>
